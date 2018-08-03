@@ -40,7 +40,7 @@ namespace PhoneApp
             this.Address = a;
         }
 
-        public string displayContact(List<Address> AddList, List<Country> CtryList)
+        public string displayContact()
 		{
             string str = "";
             str += $"Contact ID: {this.ContactId} \n";
@@ -49,7 +49,7 @@ namespace PhoneApp
             str += $"Gender: {this.Gender} \n";
             str += $"Age: {this.Age} \n";
             str += $"Phone Number: {this.PhoneNumber} \n";
-            foreach (var item in AddList)
+            foreach (var item in AddressDA.AddList)
             {
                 if(item.AddressID == this.AddressID)
                 {
@@ -57,7 +57,7 @@ namespace PhoneApp
                     str += $"City: {item.City} \n";
                     str += $"State: {item.State} \n";
                     str += $"Zip Code: {item.ZipCode} \n";
-                    foreach (var element in CtryList)
+                    foreach (var element in CountryDA.CtryList)
                     {
                         if(element.CountryID == item.CountryID)
                         {

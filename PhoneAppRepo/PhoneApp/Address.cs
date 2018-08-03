@@ -8,8 +8,8 @@ namespace PhoneApp
 {
     public class Address
 	{
-         int addressID, countryID, zipCode;
-         string address, city, state;
+        int addressID, countryID, zipCode;
+        string address, city, state;
 
         Country country;
 

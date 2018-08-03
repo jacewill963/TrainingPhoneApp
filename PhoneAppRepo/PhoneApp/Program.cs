@@ -10,27 +10,14 @@ namespace PhoneApp
 	{
 		static void Main(string[] args)
 		{
-            SqlConnection connect = null;
+            //SqlConnection connect = null;
             try
             {
-                // Sql command and connectString Authentication, connection
-                string command = "SELECT COUNT(*) FROM PHONE";
-                string conString = "Data Source=revature-cuny-jace-server.database.windows.net;Initial Catalog=Week2DB;Persist Security Info=True;User ID=jacewill963;Password=Khunta96#";
-                connect = new SqlConnection(conString);
-                
-                //1. Open connection
-                connect.Open();
-                //2. SQL Command
-                SqlCommand sqlCommand = new SqlCommand(command, connect);
-                //3. Execute query
-                SqlDataReader data = sqlCommand.ExecuteReader();
-                int phoneCheck = 0;
                 Phone myPhone = new Phone();
-                while (data.Read()){phoneCheck = (int)data[0];}
-                connect.Close();
-
+                bool phoneCheck = myPhone.read();
+                
                 //Check if phone data exists
-                if (phoneCheck == 0)
+                if (phoneCheck)
                 {
                     //if data doesn't exist ask use for phone information
                     Console.WriteLine(":::::New Phone Creation:::::");
@@ -50,18 +37,14 @@ namespace PhoneApp
                     myPhone.PhoneNumber = Convert.ToInt64(Console.ReadLine());
 
                     //insert into database using ExecuteNonQuery().
-                    ConnectToDB(connect, command, sqlCommand, myPhone, null, null, "INSERT_PHONE");
-                }
-                else
-                {
-                    ConnectToDB(connect, command, sqlCommand, myPhone, null, null, "READ_PHONE");
+                    myPhone.insert();
                 }
                 //Declare lists to store Addresses and Countries
-                List<Address> AddList = new List<Address>();
-                List<Country> CtryList = new List<Country>();
 
                 //Load Contacts
-                ConnectToDB(connect, command, sqlCommand, myPhone, AddList, CtryList, "READ_CONTACTS");
+                myPhone.contactList = ContactDA.read();
+
+                //ConnectToDB(myPhone, AddList, CtryList, "READ_CONTACTS");
                 
                 //Displa Main menu
                 bool display = true;
@@ -205,7 +188,7 @@ namespace PhoneApp
                                             //connect.Open();
                                             Country c = null;
                                             bool storeData = true;
-                                            foreach (var item in CtryList)
+                                            foreach (var item in CountryDA.CtryList)
                                             {
                                                 if(Convert.ToString(item.CountryName).ToLower() == countryName.ToLower())
                                                 {
@@ -222,70 +205,11 @@ namespace PhoneApp
                                                 //DATA ACCESS METHOD
                                                 CountryDA.insert(c);
                                                 //===============================================
-                                                CtryList.Add(c);
                                             }
-                                            connect.Open();
                                             Address a = new Address(addressSt, city, state, zip, c.CountryID, c);
-
-                                            command = $"INSERT INTO Address (ADDRESS, CITY, STATE, ZIP_CODE, COUNTRY_ID) " +
-                                                      $"VALUES (@address, @city, @state, @zip, @countryID)";
-                                            using (SqlDataAdapter dataAdapter = new SqlDataAdapter())
-                                            {
-                                                using (sqlCommand = new SqlCommand(command, connect))
-                                                {
-                                                    sqlCommand.Parameters.AddWithValue("@address", a.AddressST);
-                                                    sqlCommand.Parameters.AddWithValue("@city", a.City);
-                                                    sqlCommand.Parameters.AddWithValue("@state", a.State);
-                                                    sqlCommand.Parameters.AddWithValue("@zip", a.ZipCode);
-                                                    sqlCommand.Parameters.AddWithValue("@countryID", a.CountryID);
-                                                    sqlCommand.ExecuteNonQuery();
-                                                }
-                                            };
-                                            
-                                            command = "SELECT ADDRESS_ID FROM ADDRESS " +
-                                                      $"WHERE ADDRESS = '{a.AddressST}' AND CITY = '{a.City}'";
-                                            using (SqlCommand cmd = new SqlCommand(command, connect))
-                                            {
-                                                using (data = cmd.ExecuteReader())
-                                                {
-                                                    while (data.Read())
-                                                    {
-                                                        a.AddressID = (int)data[0];
-                                                    }
-                                                }
-                                            }
-                                            AddList.Add(a);
+                                            AddressDA.insert(a);
                                             Contact con = new Contact(fname, lname, age, gender, a.AddressID, phoneNum, a);
                                             ContactDA.insert(con);
-                                            /*insert into database using ExecuteNonQuery().
-                                            command = $"INSERT INTO dbo.Contacts (FIRST_NAME, LAST_NAME, AGE, GENDER, ADDRESS_ID, PHONE_NUMBER) " +
-                                                       $"VALUES (@firstName, @lastName, @age, @gender, @addressID, @phoneNumber)";
-                                            using (SqlDataAdapter dataAdapter = new SqlDataAdapter())
-                                            {
-                                                using (sqlCommand = new SqlCommand(command, connect))
-                                                {
-                                                    sqlCommand.Parameters.AddWithValue("@firstName", con.FName);
-                                                    sqlCommand.Parameters.AddWithValue("@lastName", con.LName);
-                                                    sqlCommand.Parameters.AddWithValue("@age", con.Age);
-                                                    sqlCommand.Parameters.AddWithValue("@gender", con.Gender);
-                                                    sqlCommand.Parameters.AddWithValue("@addressID", con.AddressID);
-                                                    sqlCommand.Parameters.AddWithValue("@phoneNumber", con.PhoneNumber);
-                                                    sqlCommand.ExecuteNonQuery();
-                                                }
-                                            };
-                                            command = $"SELECT Contact_ID FROM Contacts WHERE PHONE_NUMBER = {con.PhoneNumber};";
-                                            using (SqlCommand cmd = new SqlCommand(command, connect))
-                                            {
-                                                using (data = cmd.ExecuteReader())
-                                                {
-                                                    while (data.Read())
-                                                    {
-                                                        con.ContactId = (int)data[0];
-                                                    }
-                                                }
-                                            }
-                                            connect.Close();
-                                            */
                                             myPhone.contactList.Add(con);
                                             currMenu = mainMenu + "\n \n Contact Added!";
                                             currDisplay = "main";
@@ -325,7 +249,7 @@ namespace PhoneApp
 
                                             foreach (var contact in searchQuery)
                                             {
-                                                currMenu += System.Environment.NewLine + contact.displayContact(AddList, CtryList);
+                                                currMenu += System.Environment.NewLine + contact.displayContact();
                                             }
                                             reDisplayList = false;
                                         }
@@ -422,6 +346,7 @@ namespace PhoneApp
                                                     continue;
                                             }
                                             updateResult = Console.ReadLine();
+                                            /*string command;
                                             if (updateCol == "COUNTRY_NAME" || updateCol == "COUNTRY_CODE")
                                             {
                                                 command = $"UPDATE dbo.Country " +
@@ -458,8 +383,15 @@ namespace PhoneApp
                                                     sqlCommand.ExecuteNonQuery();
                                                 }
                                                 connect.Close();
-                                            };
-                                            ConnectToDB(connect, command, sqlCommand, myPhone, AddList, CtryList, "READ_CONTACTS");
+                                            };*/
+                                            
+
+                                           
+
+                                            ContactDA.update(updateCol, updateElement, updateResult);
+
+                                            myPhone.contactList = ContactDA.read();
+
                                             Console.WriteLine("Contact Successfully Updated! Press (1) to continue Press (2) to Cancel");
                                             string continueUpdate = Console.ReadLine();
                                             if (continueUpdate == "1")
@@ -488,7 +420,7 @@ namespace PhoneApp
                                             currMenu = ":::::Delete Contact:::::\n";
                                             foreach (Contact contact in myPhone.contactList)
                                             {
-                                                currMenu += contact.displayContact(AddList, CtryList) + System.Environment.NewLine;
+                                                currMenu += contact.displayContact() + System.Environment.NewLine;
                                             }
                                             currMenu += "\nSelect a record to Delete by Contact ID:";
 
@@ -518,7 +450,7 @@ namespace PhoneApp
                                                     continue;
                                                 }
                                             }
-                                            command = $"DELETE FROM dbo.Contacts " +
+                                            /*command = $"DELETE FROM dbo.Contacts " +
                                                       $"WHERE CONTACT_ID = @contactID";
                                             using (SqlDataAdapter dataAdapter = new SqlDataAdapter())
                                             {
@@ -529,7 +461,8 @@ namespace PhoneApp
                                                     sqlCommand.ExecuteNonQuery();
                                                 }
                                                 connect.Close();
-                                            };
+                                            };*/
+                                            ContactDA.delete(delContact);
                                             myPhone.contactList.Remove(delContact);
                                             redisplay = true;
                                             while (redisplay)
@@ -587,7 +520,7 @@ namespace PhoneApp
                                         currMenu = ":::::View All Contacts::::: \n";
                                         foreach (Contact contact in myPhone.contactList)
                                         {
-                                            currMenu += contact.displayContact(AddList, CtryList) + System.Environment.NewLine;
+                                            currMenu += contact.displayContact() + System.Environment.NewLine;
                                         }
                                         currMenu += "Press (1) to return to Main Menu, Press (2) to close app.";
                                         redisplay = true;
@@ -603,7 +536,7 @@ namespace PhoneApp
                                         currMenu = ":::::Search Contacts::::: \n";
                                         foreach (var contact in searchQuery)
                                         {
-                                            currMenu += contact.displayContact(AddList, CtryList) + System.Environment.NewLine;
+                                            currMenu += contact.displayContact() + System.Environment.NewLine;
                                         }
                                         currMenu += "Press (1) to return to Main Menu, Press (2) to close app.";
                                         redisplay = true;
@@ -626,133 +559,7 @@ namespace PhoneApp
                 Console.WriteLine(ex.Message);
                 Console.ReadLine();
             }
-            finally
-            {
-                connect.Close();
-            }
 		}
-        public static void ConnectToDB(SqlConnection connect, string command, SqlCommand sqlCommand, Phone myPhone ,List<Address> addList, List<Country> ctryList , string cmd)
-        {
-            switch (cmd)
-            {   
-                case "INSERT_PHONE":
-                    command = $"INSERT INTO Phone " +
-                           "VALUES (@phoneName, @firstName, @lastName, @phoneNumber, @email);";
-                    using (SqlDataAdapter dataAdapter = new SqlDataAdapter())
-                    {
-                        connect.Open();
-                        using (sqlCommand = new SqlCommand(command, connect))
-                        {
-                            //myPhone = (Phone)myPhone;
-
-                            sqlCommand.Parameters.AddWithValue("@phoneName", myPhone.PhoneName);
-                            sqlCommand.Parameters.AddWithValue("@firstName", myPhone.Fname);
-                            sqlCommand.Parameters.AddWithValue("@lastName", myPhone.Lname);
-                            sqlCommand.Parameters.AddWithValue("@phoneNumber", myPhone.PhoneNumber);
-                            sqlCommand.Parameters.AddWithValue("@email", myPhone.Email);
-                            sqlCommand.ExecuteNonQuery();
-                        }
-                    };
-                    connect.Close();
-                    break;
-                case "READ_PHONE":
-                    //connect = new SqlConnection(conString);
-                    connect.Open();
-                    command = "SELECT * FROM PHONE";
-                    sqlCommand = new SqlCommand(command, connect);
-                    SqlDataReader data = sqlCommand.ExecuteReader();
-                    while (data.Read())
-                    {
-                        myPhone.PhoneName = (string)data[0];
-                        myPhone.Fname = (string)data[1];
-                        myPhone.Lname = (string)data[2];
-                        myPhone.PhoneNumber = (long)data[3];
-                        myPhone.Email = (string)data[4];
-                    }
-                    connect.Close();
-                    break;
-                case "READ_CONTACTS":
-                    CountryDA.read(ctryList);
-
-                    /*connect.Open();
-                    command = "SELECT * FROM COUNTRY";
-                    sqlCommand = new SqlCommand(command, connect);
-                    data = sqlCommand.ExecuteReader();
-                    ctryList.RemoveAll(contact => contact.CountryID >= 0);
-                    while (data.Read())
-                    {
-                        Country country = new Country();
-                        country.CountryID = (int)data[0];
-                        country.CountryName = (string)data[1];
-                        country.CountryCode = (int)data[2];
-
-                        ctryList.Add(country);
-                    }
-                    connect.Close();*/
-
-                    AddressDA.read(addList, ctryList);
-                    
-                    
-                    /*connect.Open();
-                    command = "SELECT * FROM ADDRESS";
-                    sqlCommand = new SqlCommand(command, connect);
-                    data = sqlCommand.ExecuteReader();
-                    addList.RemoveAll(address => address.AddressID >= 0);
-                    while (data.Read())
-                    {
-                        Address address = null;
-                        foreach (var item in ctryList)
-                        {
-                            if(item.CountryID == (int)data[5])
-                            {
-                                address = new Address(
-                                    (string)data[1],
-                                    (string)data[2],
-                                    (string)data[3],
-                                    (int)data[4],
-                                    (int)data[5],
-                                    item);
-                            }
-                        }
-                        address.AddressID = (int)data[0];
-
-                        addList.Add(address);
-                    }
-                    connect.Close();*/
-
-                    myPhone.contactList = ContactDA.read(addList);
-                    /*connect.Open();
-                    command = "SELECT * FROM CONTACTS";
-                    sqlCommand = new SqlCommand(command, connect);
-                    data = sqlCommand.ExecuteReader();
-                    myPhone.contactList = new List<Contact>();
-                    while (data.Read())
-                    {
-                        Contact contact = null;
-                        foreach (var item in addList)
-                        {
-                            if (item.AddressID == (int)data[5])
-                            {
-                                contact = new Contact(item);
-                            }
-                        }
-                        contact.ContactId = (int)data[0];
-                        contact.FName = (string)data[1];
-                        contact.LName = (string)data[2];
-                        contact.Age = (int)data[3];
-                        contact.Gender = (string)data[4];
-                        contact.AddressID = (int)data[5];
-                        contact.PhoneNumber = (long)data[6];
-
-                        myPhone.contactList.Add(contact);
-                    }
-                    connect.Close();*/
-
-                    break;
-                default:
-                    break;
-            }
-        }
 	}
 
 }

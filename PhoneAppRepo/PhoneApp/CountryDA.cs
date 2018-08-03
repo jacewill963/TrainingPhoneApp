@@ -12,12 +12,15 @@ namespace PhoneApp
         static SqlCommand sqlCommand;
         static SqlDataReader data;
 
-        public static void read(List<Country> countries)
+        public static List<Country> CtryList = new List<Country>();
+
+        public static void read()
         {
             //List<Country> countries = new List<Country>();
             using (connect = new SqlConnection(conString))
             {
                 connect.Open();
+                CtryList.Clear();
                 command = "SELECT * FROM Country";
                 sqlCommand = new SqlCommand(command, connect);
                 try
@@ -30,10 +33,9 @@ namespace PhoneApp
                         country.CountryName = (string)data[1];
                         country.CountryCode = (int)data[2];
 
-                        countries.Add(country);
+                        CtryList.Add(country);
                         country = null;
                     }
-
                 }
                 catch (Exception ex)
                 {
@@ -43,7 +45,7 @@ namespace PhoneApp
             }
         }
 
-        public static void insert(Country c)
+        public static int insert(Country c)
         {
             //Create Query Statment using Parmeterized SQL
             command = $"INSERT INTO dbo.Country (COUNTRY_NAME, COUNTRY_CODE) " +
@@ -74,6 +76,8 @@ namespace PhoneApp
                                 while (data.Read()) { c.CountryID = (int)data[0]; }
                             }
                         }
+                        CtryList.Add(c);
+                        return c.CountryID;
                     }
                     catch (Exception ex)
                     {
@@ -92,6 +96,33 @@ namespace PhoneApp
 
                 }
             }*/
+        }
+
+        public static void update(Contact updateElement, string updateName, int updateCode)
+        {
+            Country c = null;
+            bool storeData = true;
+            foreach (var item in CtryList)
+            {
+                if (Convert.ToString(item.CountryName).ToLower() == updateName.ToLower() && item.CountryCode == updateCode)
+                {
+                    c = item;
+                    storeData = false;
+                    break;
+                }
+            }
+
+            if (storeData)
+            {
+                c = new Country();
+                c.CountryName = updateName;
+                c.CountryCode = updateCode;
+                //===============================================
+                //DATA ACCESS METHOD
+                insert(c);
+                //===============================================
+            }
+            updateElement.Address.CountryID = c.CountryID;
         }
     }
 }

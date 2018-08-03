@@ -1,17 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Data.SqlClient;
 
-
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Collections;
 namespace PhoneApp
 {
-	class Phone
-	{
+    class Phone
+    {
         //Attributes
         string phoneName;
         string fname;
@@ -28,30 +22,87 @@ namespace PhoneApp
 
 
         //Constructors
-        public Phone(){}
-		public Phone(string phoneName, string fname, string lname, string email, long phoneNumber)
-		{
-			this.PhoneName = phoneName;
+        public Phone() { }
+        public Phone(string phoneName, string fname, string lname, string email, long phoneNumber)
+        {
+            this.PhoneName = phoneName;
             this.Fname = fname;
             this.Lname = lname;
             this.email = email;
             this.phoneNumber = phoneNumber;
-		}
+        }
 
-		//Methods
-		internal void addContact(Contact contact)
-		{
-			contactList.Add(contact);
-		}
-		internal void shutDown() // Method to turn phone off or exit application
-		{
-			try
-			{
-				System.Environment.Exit(0);
-			}catch(Exception ex)
-			{
-				Console.WriteLine(ex.Message);
-			}
-		}
-	}
+        public bool read()
+        {
+            string conString = "Data Source=revature-cuny-jace-server.database.windows.net;Initial Catalog=Week2DB;Persist Security Info=True;User ID=jacewill963;Password=Khunta96#";
+            using (SqlConnection connect = new SqlConnection(conString))
+            {
+                connect.Open();
+                string command = "SELECT * FROM PHONE";
+                System.Console.WriteLine(this.phoneName);
+                SqlCommand sqlCommand = new SqlCommand(command, connect);
+                try
+                {
+                    SqlDataReader data = sqlCommand.ExecuteReader();
+                    while (data.Read())
+                    {
+                        this.PhoneName = (string)data[0];
+                        this.Fname = (string)data[1];
+                        this.Lname = (string)data[2];
+                        this.PhoneNumber = (long)data[3];
+                        this.Email = (string)data[4];
+                    }
+                    return (this.phoneName != null) ? false : true;
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("ERROR DATA ACCESS - INSERT_ADDRESS: " + ex.Message);
+                    throw;
+                }
+
+            }
+
+        }
+
+        public void insert()
+        {
+            //Create Query Statment using Parmeterized SQL
+            string conString = "Data Source=revature-cuny-jace-server.database.windows.net;Initial Catalog=Week2DB;Persist Security Info=True;User ID=jacewill963;Password=Khunta96#";
+            string command = $"INSERT INTO Phone " +
+                              "VALUES (@phoneName, @firstName, @lastName, @phoneNumber, @email);";
+            //Establish a New Connection
+            using (SqlConnection connect = new SqlConnection(conString))
+            {
+                connect.Open();
+                //Establish an Adapter to write the data
+                using (SqlDataAdapter dataAdapter = new SqlDataAdapter())
+                {
+                    try
+                    {
+                        //Establish an Command using SQLCommand
+                        using (SqlCommand sqlCommand = new SqlCommand(command, connect))
+                        {
+                            //Execute Query on the database 
+                            sqlCommand.Parameters.AddWithValue("@phoneName", this.PhoneName);
+                            sqlCommand.Parameters.AddWithValue("@firstName", this.Fname);
+                            sqlCommand.Parameters.AddWithValue("@lastName", this.Lname);
+                            sqlCommand.Parameters.AddWithValue("@phoneNumber", this.PhoneNumber);
+                            sqlCommand.Parameters.AddWithValue("@email", this.Email);
+                            sqlCommand.ExecuteNonQuery();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("ERROR DATA ACCESS - INSERT_ADDRESS: " + ex.Message);
+                        throw;
+                    }
+                    finally
+                    {
+                        connect.Close();
+                    }
+                };
+            }
+        }
+    }
 }

@@ -11,12 +11,16 @@ namespace PhoneApp
         static SqlCommand sqlCommand;
         static SqlDataReader data;
 
-        public static void read(List<Address> addList, List<Country> ctryList)
+        public static List<Address> AddList = new List<Address>();
+
+
+        public static void read()
         {
             //List<Country> countries = new List<Country>();
             using (connect = new SqlConnection(conString))
             {
                 connect.Open();
+                AddList.Clear();
                 command = "SELECT * FROM Address";
                 sqlCommand = new SqlCommand(command, connect);
                 try
@@ -26,7 +30,7 @@ namespace PhoneApp
                     while (data.Read())
                     {
                         Address address = null;
-                        foreach (var item in ctryList)
+                        foreach (var item in CountryDA.CtryList)
                         {
                             if (item.CountryID == (int)data[5])
                             {
@@ -42,7 +46,7 @@ namespace PhoneApp
                         }
                         address.AddressID = (int)data[0];
 
-                        addList.Add(address);
+                        AddList.Add(address);
                     }
                 }
                 catch (Exception ex)
@@ -54,11 +58,11 @@ namespace PhoneApp
             }
         }
 
-        public static void insert(Country c)
+        public static void insert(Address a)
         {
             //Create Query Statment using Parmeterized SQL
-            command = $"INSERT INTO dbo.Country (COUNTRY_NAME, COUNTRY_CODE) " +
-                      $"VALUES (@countryName, @countryCode)";
+            command = $"INSERT INTO Address (ADDRESS, CITY, STATE, ZIP_CODE, COUNTRY_ID) " +
+                      $"VALUES (@address, @city, @state, @zip, @countryID)";
             //Establish a New Connection
             using (connect = new SqlConnection(conString))
             {
@@ -72,24 +76,32 @@ namespace PhoneApp
                         using (sqlCommand = new SqlCommand(command, connect))
                         {
                             //Execute Query on the database 
-                            sqlCommand.Parameters.AddWithValue("@countryName", c.CountryName);
-                            sqlCommand.Parameters.AddWithValue("@countryCode", c.CountryCode);
+                            sqlCommand.Parameters.AddWithValue("@address", a.AddressST);
+                            sqlCommand.Parameters.AddWithValue("@city", a.City);
+                            sqlCommand.Parameters.AddWithValue("@state", a.State);
+                            sqlCommand.Parameters.AddWithValue("@zip", a.ZipCode);
+                            sqlCommand.Parameters.AddWithValue("@countryID", a.CountryID);
                             sqlCommand.ExecuteNonQuery();
                         }
 
-                        command = "SELECT MAX(COUNTRY_ID) FROM COUNTRY";
+                        command = "SELECT MAX(ADDRESS_ID) FROM ADDRESS";
                         using (sqlCommand = new SqlCommand(command, connect))
                         {
                             using (data = sqlCommand.ExecuteReader())
                             {
-                                while (data.Read()) { c.CountryID = (int)data[0]; }
+                                while (data.Read()) { a.AddressID = (int)data[0]; }
                             }
                         }
+                        AddList.Add(a);
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("ERROR DATA ACCESS - INSERT_CONTACTS: " + ex.Message);
+                        Console.WriteLine("ERROR DATA ACCESS - INSERT_ADDRESS: " + ex.Message);
                         throw;
+                    }
+                    finally
+                    {
+                        connect.Close();
                     }
                 };
             }
@@ -103,6 +115,43 @@ namespace PhoneApp
 
                 }
             }*/
+        }
+
+        public static void update(string updateCol, Contact updateElement, string updateResult)
+        {
+            command = $"UPDATE dbo.Address " +
+            $"SET {updateCol} = @{updateCol} " +
+            $"WHERE ADDRESS_ID = {updateElement.Address.AddressID}";
+            try
+            {
+                using (connect = new SqlConnection(conString))
+                {
+                    using (SqlDataAdapter dataAdapter = new SqlDataAdapter())
+                    {
+                        connect.Open();
+                        using (sqlCommand = new SqlCommand(command, connect))
+                        {
+
+                            if (updateCol == "ZIP_CODE" || updateCol == "COUNTRY_ID")
+                            {
+                                sqlCommand.Parameters.AddWithValue($"@{updateCol}", Convert.ToInt32(updateResult));
+                            }
+                            else
+                            {
+                                sqlCommand.Parameters.AddWithValue($"@{updateCol}", updateResult);
+                            }
+                            sqlCommand.ExecuteNonQuery();
+                        }
+                        connect.Close();
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ERROR DATA ACCESS - UPDATE_ADDRESS: " + ex.Message);
+                throw;
+            }
+            
         }
     }
 }
